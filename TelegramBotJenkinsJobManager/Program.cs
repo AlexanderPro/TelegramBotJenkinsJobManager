@@ -20,16 +20,15 @@ namespace TelegramBotJenkinsJobManager
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
             var configuration = builder.Build();
-            var serviceProvider = new ServiceCollection()
-                .AddLogging()
-                .RegisterServices(configuration)
-                .BuildServiceProvider();
-
             Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(configuration).CreateLogger();
-
             var polling = configuration.GetValue<bool>("telegram:polling");
             if (polling)
             {
+                var serviceProvider = new ServiceCollection()
+                    .AddLogging()
+                    .RegisterServices(configuration)
+                    .BuildServiceProvider();
+
                 var bot = new TelegramPollingBot(serviceProvider.GetService<TelegramBotClient>(), serviceProvider.GetService<ITelegramResponseHandler>());
                 bot.Start();
                 var so = new object();
@@ -49,6 +48,7 @@ namespace TelegramBotJenkinsJobManager
 
         public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
-                .UseStartup<Startup>();
+                .UseStartup<Startup>()
+                .UseSerilog((hostingContext, loggerConfiguration) => loggerConfiguration.ReadFrom.Configuration(hostingContext.Configuration));
     }
 }

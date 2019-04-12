@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Telegram.Bot;
 using Telegram.Bot.Types;
-using Microsoft.Extensions.Configuration;
 using TelegramBotJenkinsJobManager.Services;
-using MihaZupan;
+
 
 namespace TelegramBotJenkinsJobManager.Controllers
 {
