@@ -166,7 +166,7 @@ Usage:
 
                     case var s when _menu.Select(x => x.StatusName).Contains(callbackQuery.Data):
                         {
-                            var status = (Tuple<DateTime, string>)null;
+                            var status = (JobStatus)null;
                             var menuItem = _menu.FirstOrDefault(x => x.StatusName == callbackQuery.Data);
                             try
                             {
@@ -179,7 +179,7 @@ Usage:
 
                             try
                             {
-                                var message = status != null ? $"{menuItem.DisplayName} is {status.Item2} on {status.Item1:dd.MM.yyyy HH:mm}" : $"Failed to get a status of the job";
+                                var message = status != null ? $"{menuItem.DisplayName} is {status.Status} on {status.TimeStamp.FromUnixTimeMilliseconds():dd.MM.yyyy HH:mm}" : $"Failed to get a status of the job";
                                 await _client.SendTextMessageAsync(callbackQuery.Message.Chat.Id, message);
                             }
                             catch (Exception ex)

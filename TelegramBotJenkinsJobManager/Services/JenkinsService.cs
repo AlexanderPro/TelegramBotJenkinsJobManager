@@ -7,7 +7,6 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.IO;
 using Newtonsoft.Json;
-using TelegramBotJenkinsJobManager.Extensions;
 
 namespace TelegramBotJenkinsJobManager.Services
 {
@@ -53,7 +52,7 @@ namespace TelegramBotJenkinsJobManager.Services
             }
         }
 
-        public async Task<Tuple<DateTime, string>> GetJobStatusAsync(string jobPath)
+        public async Task<JobStatus> GetJobStatusAsync(string jobPath)
         {
             using (var httpClient = new HttpClient())
             {
@@ -67,13 +66,7 @@ namespace TelegramBotJenkinsJobManager.Services
                 url = $"{_protocol}://{_fqdn}/{jobPath}/lastBuild/api/json?pretty=true";
                 responseMessage = await httpClient.PostAsync(url, new FormUrlEncodedContent(new Dictionary<string, string>()));
                 responseContent = await responseMessage.Content.ReadAsStringAsync();
-                var lastBuild = JsonConvert.DeserializeObject<LastBuild>(responseContent);
-                if (lastBuild == null)
-                {
-                    throw new Exception(responseContent);
-                }
-                var result = lastBuild.result == null ? "UNKNOWN" : lastBuild.result;
-                return new Tuple<DateTime, string>(lastBuild.timestamp.FromUnixTimeMilliseconds(), result);
+                return JsonConvert.DeserializeObject<JobStatus>(responseContent);
             }
         }
 
@@ -106,12 +99,6 @@ namespace TelegramBotJenkinsJobManager.Services
                 }
                 return result;
             }
-        }
-
-        private class LastBuild
-        {
-            public string result;
-            public long timestamp;
         }
 
         private class LastSuccessfulBuild

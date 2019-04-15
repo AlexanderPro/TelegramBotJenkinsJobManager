@@ -8,7 +8,7 @@ namespace TelegramBotJenkinsJobManager.Services
     public interface IJenkinsService
     {
         Task RunJobAsync(string jobPath, IDictionary<string, string> parameters);
-        Task<Tuple<DateTime, string>> GetJobStatusAsync(string jobPath);
+        Task<JobStatus> GetJobStatusAsync(string jobPath);
         Task<IList<Tuple<string, Stream>>> GetJobArtifactsAsync(string jobPath);
     }
 }
