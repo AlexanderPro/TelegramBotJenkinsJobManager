@@ -1,9 +1,11 @@
 ﻿using System;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using Telegram.Bot;
@@ -14,7 +16,7 @@ namespace TelegramBotJenkinsJobManager
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
@@ -24,31 +26,21 @@ namespace TelegramBotJenkinsJobManager
             var polling = configuration.GetValue<bool>("telegram:polling");
             if (polling)
             {
-                var serviceProvider = new ServiceCollection()
-                    .AddLogging()
-                    .RegisterServices(configuration)
-                    .BuildServiceProvider();
-
-                var bot = new TelegramPollingBot(serviceProvider.GetService<TelegramBotClient>(), serviceProvider.GetService<ITelegramResponseHandler>());
-                bot.Start();
-                var so = new object();
-                while (true)
-                {
-                    lock (so)
-                    {
-                        Monitor.Wait(so);
-                    }
-                }
+                await new HostBuilder()
+                      .ConfigureServices((hostContext, services) =>
+                      {
+                          services.RegisterServices(configuration);
+                      })
+                      .RunConsoleAsync();
             }
             else
             {
-                CreateWebHostBuilder(args).Build().Run();
+                await WebHost.CreateDefaultBuilder(args)
+                      .UseStartup<Startup>()
+                      .UseSerilog((hostingContext, loggerConfiguration) => loggerConfiguration.ReadFrom.Configuration(hostingContext.Configuration))
+                      .Build()
+                      .RunAsync();
             }
         }
-
-        public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
-            WebHost.CreateDefaultBuilder(args)
-                .UseStartup<Startup>()
-                .UseSerilog((hostingContext, loggerConfiguration) => loggerConfiguration.ReadFrom.Configuration(hostingContext.Configuration));
     }
 }

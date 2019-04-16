@@ -20,14 +20,16 @@ namespace TelegramBotJenkinsJobManager.Services
         private readonly string _jenkinsProtocol;
         private readonly string _jenkinsFqdn;
         private readonly IList<long> _allowedChatIds;
+        private readonly IJobQueue _jobQueue;
 
-        public TelegramResponseHandler(TelegramBotClient client, IList<long> allowedChatIds, string jenkinsProtocol, string jenkinsFqdn, IList<MenuItem> menu, IJenkinsService jenkinsService)
+        public TelegramResponseHandler(TelegramBotClient client, IJenkinsService jenkinsService, IJobQueue jobQueue, IList<MenuItem> menu, IList<long> allowedChatIds, string jenkinsProtocol, string jenkinsFqdn)
         {
             _client = client ?? throw new ArgumentNullException(nameof(client));
             _jenkinsService = jenkinsService ?? throw new ArgumentNullException(nameof(jenkinsService));
             _menu = menu ?? throw new ArgumentNullException(nameof(menu));
             _jenkinsProtocol = jenkinsProtocol ?? throw new ArgumentNullException(nameof(jenkinsProtocol));
             _jenkinsFqdn = jenkinsFqdn ?? throw new ArgumentNullException(nameof(jenkinsFqdn));
+            _jobQueue = jobQueue ?? throw new ArgumentNullException(nameof(jobQueue));
             _allowedChatIds = allowedChatIds;
         }
 
@@ -67,10 +69,10 @@ Usage:
                             {
                                 await _client.SendTextMessageAsync(
                                     chatId: message.Chat.Id,
-                                    text: "Select",
+                                    text: "Run",
                                     parseMode: ParseMode.Html,
                                     disableWebPagePreview: false,
-                                    replyMarkup: new InlineKeyboardMarkup(_menu.GroupBy(x => x.Row, y => y).OrderBy(x => x.Key).Select(x => x.Select(y => InlineKeyboardButton.WithCallbackData($"Run {y.DisplayName}", y.RunName)))));
+                                    replyMarkup: new InlineKeyboardMarkup(_menu.GroupBy(x => x.Row, y => y).OrderBy(x => x.Key).Select(x => x.Select(y => InlineKeyboardButton.WithCallbackData(y.DisplayName, y.RunName)))));
                             }
                             catch (Exception ex)
                             {
@@ -85,10 +87,10 @@ Usage:
                             {
                                 await _client.SendTextMessageAsync(
                                     chatId: message.Chat.Id,
-                                    text: "Select",
+                                    text: "Status",
                                     parseMode: ParseMode.Html,
                                     disableWebPagePreview: false,
-                                    replyMarkup: new InlineKeyboardMarkup(_menu.GroupBy(x => x.Row, y => y).OrderBy(x => x.Key).Select(x => x.Select(y => InlineKeyboardButton.WithCallbackData($"Status {y.DisplayName}", y.StatusName)))));
+                                    replyMarkup: new InlineKeyboardMarkup(_menu.GroupBy(x => x.Row, y => y).OrderBy(x => x.Key).Select(x => x.Select(y => InlineKeyboardButton.WithCallbackData(y.DisplayName, y.StatusName)))));
                             }
                             catch (Exception ex)
                             {
@@ -103,10 +105,10 @@ Usage:
                             {
                                 await _client.SendTextMessageAsync(
                                     chatId: message.Chat.Id,
-                                    text: "Select",
+                                    text: "Get Artifacts",
                                     parseMode: ParseMode.Html,
                                     disableWebPagePreview: false,
-                                    replyMarkup: new InlineKeyboardMarkup(_menu.GroupBy(x => x.Row, y => y).OrderBy(x => x.Key).Select(x => x.Select(y => InlineKeyboardButton.WithCallbackData($"Artifacts of {y.DisplayName}", y.ArtifactName)))));
+                                    replyMarkup: new InlineKeyboardMarkup(_menu.GroupBy(x => x.Row, y => y).OrderBy(x => x.Key).Select(x => x.Select(y => InlineKeyboardButton.WithCallbackData(y.DisplayName, y.ArtifactName)))));
                             }
                             catch (Exception ex)
                             {
@@ -141,9 +143,9 @@ Usage:
                     case var s when _menu.Select(x => x.RunName).Contains(callbackQuery.Data):
                         {
                             var result = true;
+                            var menuItem = _menu.FirstOrDefault(x => x.RunName == callbackQuery.Data);
                             try
                             {
-                                var menuItem = _menu.FirstOrDefault(x => x.RunName == callbackQuery.Data);
                                 await _jenkinsService.RunJobAsync(menuItem.Path, menuItem.Parameters.ToDictionary(x => x.Name, y => y.Value));
                             }
                             catch (Exception ex)
@@ -154,12 +156,17 @@ Usage:
 
                             try
                             {
-                                var message = result ? "The job has been enqueued successfully" : "Failed to enqueue the job";
+                                var message = result ? $"{menuItem.DisplayName} has been enqueued successfully" : $"Failed to enqueue {menuItem.DisplayName}";
                                 await _client.SendTextMessageAsync(callbackQuery.Message.Chat.Id, message);
                             }
                             catch (Exception ex)
                             {
                                 Log.Error(ex, "Run handler. Send text.");
+                            }
+
+                            if (result && menuItem.NotifyWhenBuildIsFinished)
+                            {
+                                _jobQueue.Enqueue(new JobSettings { ChatId = callbackQuery.Message.Chat.Id, JobPath = menuItem.Path, JobDisplayName = menuItem.DisplayName });
                             }
                         }
                         break;
@@ -192,9 +199,9 @@ Usage:
                     case var s when _menu.Select(x => x.ArtifactName).Contains(callbackQuery.Data):
                         {
                             var result = true;
+                            var menuItem = _menu.FirstOrDefault(x => x.ArtifactName == callbackQuery.Data);
                             try
                             {
-                                var menuItem = _menu.FirstOrDefault(x => x.ArtifactName == callbackQuery.Data);
                                 var artifacts = await _jenkinsService.GetJobArtifactsAsync(menuItem.Path);
                                 foreach (var artifact in artifacts)
                                 {

@@ -19,6 +19,8 @@ namespace TelegramBotJenkinsJobManager
 
         public int Row { get; set; }
 
+        public bool NotifyWhenBuildIsFinished { get; set; }
+
         public IList<Parameter> Parameters { get; set; }
 
         public class Parameter

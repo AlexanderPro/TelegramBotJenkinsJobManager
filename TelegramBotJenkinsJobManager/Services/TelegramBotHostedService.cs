@@ -1,16 +1,19 @@
-﻿using Telegram.Bot;
+﻿using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
+using Telegram.Bot;
 using Telegram.Bot.Args;
-using TelegramBotJenkinsJobManager.Services;
 using Serilog;
 
-namespace TelegramBotJenkinsJobManager
+
+namespace TelegramBotJenkinsJobManager.Services
 {
-    public class TelegramPollingBot
+    public class TelegramBotHostedService : IHostedService
     {
         private readonly TelegramBotClient _client;
         private readonly ITelegramResponseHandler _responseHandler;
 
-        public TelegramPollingBot(TelegramBotClient client, ITelegramResponseHandler responseHandler)
+        public TelegramBotHostedService(TelegramBotClient client, ITelegramResponseHandler responseHandler)
         {
             _client = client;
             _responseHandler = responseHandler;
@@ -20,9 +23,15 @@ namespace TelegramBotJenkinsJobManager
             _client.OnReceiveGeneralError += OnReceiveGeneralError;
         }
 
-        public void Start()
+        public Task StartAsync(CancellationToken cancellationToken)
         {
             _client.StartReceiving();
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
         }
 
         private async void OnMessageReceived(object sender, MessageEventArgs e)

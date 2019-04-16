@@ -42,13 +42,18 @@ namespace TelegramBotJenkinsJobManager.Extensions
                 }
             }
 
+            services.AddSingleton<IJobQueue, JobQueue>();
             services.AddScoped<IJenkinsService>(ctx => new JenkinsService(protocol, fqdn, userName, token));
             services.AddScoped(ctx => new TelegramBotClient(botToken, httpProxy ?? socks5Proxy));
-            services.AddScoped<ITelegramResponseHandler>(ctx => {
+            services.AddScoped<ITelegramResponseHandler>(ctx => 
+            {
                 var telegramClient = ctx.GetService<TelegramBotClient>();
                 var jenkinsService = ctx.GetService<IJenkinsService>();
-                return new TelegramResponseHandler(telegramClient, allowedChatIds, protocol, fqdn, menu, jenkinsService);
+                var jobQueue = ctx.GetService<IJobQueue>();
+                return new TelegramResponseHandler(telegramClient, jenkinsService, jobQueue, menu, allowedChatIds, protocol, fqdn);
             });
+            services.AddHostedService<TelegramBotHostedService>();
+            services.AddHostedService<JobStatusPollHostedService>();
 
             return services;
         }
