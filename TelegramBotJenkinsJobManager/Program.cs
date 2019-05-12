@@ -1,16 +1,11 @@
-﻿using System;
-using System.IO;
-using System.Threading;
+﻿using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using Serilog;
-using Telegram.Bot;
-using TelegramBotJenkinsJobManager.Services;
 using TelegramBotJenkinsJobManager.Extensions;
+using Serilog;
 
 namespace TelegramBotJenkinsJobManager
 {
@@ -22,13 +17,13 @@ namespace TelegramBotJenkinsJobManager
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
             var configuration = builder.Build();
-            Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(configuration).CreateLogger();
             var polling = configuration.GetValue<bool>("telegram:polling");
             if (polling)
             {
                 await new HostBuilder()
                       .ConfigureServices((hostContext, services) =>
                       {
+                          services.RegisterSerilog(configuration);
                           services.RegisterServices(configuration);
                       })
                       .RunConsoleAsync();

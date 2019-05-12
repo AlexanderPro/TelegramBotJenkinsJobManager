@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Telegram.Bot;
 using TelegramBotJenkinsJobManager.Services;
 using MihaZupan;
+using Serilog;
 
 namespace TelegramBotJenkinsJobManager.Extensions
 {
@@ -55,6 +56,12 @@ namespace TelegramBotJenkinsJobManager.Extensions
             services.AddHostedService<TelegramBotHostedService>();
             services.AddHostedService<JobStatusPollHostedService>();
 
+            return services;
+        }
+
+        public static IServiceCollection RegisterSerilog(this IServiceCollection services, IConfiguration configuration)
+        {
+            Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(configuration).CreateLogger();
             return services;
         }
     }
